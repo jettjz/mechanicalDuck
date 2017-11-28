@@ -100,6 +100,10 @@ contract taskStandard {
         return balances[_user];
     }
 
+    function getBalance() constant returns(uint256) {
+        return balances[msg.sender];
+    }
+
     /* Adds to maxReward. Note that this will be taken into account for the
      * depreciationRate as well */
     function payable addReward() requesterOnly, timeCheck {
@@ -128,9 +132,15 @@ contract taskStandard {
     }
 
     /* returns the ipfs hash of the first submission from a worker */
-    function getFirstSubmission() returns(string) {
+    function getFirstSubmission() constant returns(string) {
         require(workerSubmissions.qsize()>1);
         return workerSubmissions.getFirstSubmission();
+    }
+
+    /* returns the address of the first submission from a worker */
+    function getFirstAddress() constant returns(address) {
+        require(workerSubmissions.qsize()>1);
+        return workerSubmissions.getFirstAddress();
     }
 
     function approveFirstSubmission() requesterOnly {
