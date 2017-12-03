@@ -8,18 +8,18 @@ contract Queue {
 	/* State variables */
 	uint8 size = 5;
 	uint8 spotsFilled;
-	address[] participants;
 	uint limit;
+	Submission[] queueList;
 
     struct Submission {
         address worker;
-        string ipfs_hash;
+        bytes32 ipfs_hash;
         uint256 time;
     }
 
 	event limitReached();
 
-	function Queue(uint _size) {
+	function Queue(uint8 _size) {
 		spotsFilled = 0;
         size = _size;
 		queueList = new Submission[](size);
@@ -53,7 +53,7 @@ contract Queue {
 	}
 
     /* Returns the address of the person in the front of the queue */
-	function getFirstSubmission() constant returns(string) {
+	function getFirstSubmission() constant returns(bytes32) {
 		require(spotsFilled>0);
 		return queueList[0].ipfs_hash;
 	}
@@ -64,16 +64,10 @@ contract Queue {
 		return queueList[0].time;
 	}
 
-    /* Returns the address of the person in the front of the queue */
-	function getFirstAddress() constant returns(Submission) {
-		require(spotsFilled>0);
-		return queueList[0].worker;
-	}
-
 	/* Allows `msg.sender` to check their position in the queue */
 	function checkPlace() constant returns(uint8) {
 		for (uint8 i = 0; i < spotsFilled; i++) {
-			if (queueList[i] == msg.sender) {
+			if (queueList[i].worker == msg.sender) {
 				return i + 1;
 			}
 		}
@@ -87,17 +81,15 @@ contract Queue {
 				queueList[i - 1] = queueList[i];
 			}
 			spotsFilled -= 1;
-			delete participants[spotsFilled];
-			delete times[spotsFilled];
+			delete queueList[spotsFilled];
 		}
 	}
 
 	/* Places Submission in the first available position in queueList */
-	function enqueue(address addr, string submission) returns(bool){
+	function enqueue(address addr, bytes32 submission) returns(bool){
 		if (spotsFilled < size) {
 			spotsFilled += 1;
-            Submission s = Submission(addr, submission, now);
-            queueList[spotsFilled - 1] = s;
+            queueList[spotsFilled - 1] = Submission(addr, submission, now);
             if (spotsFilled==size) {
                 limitReached();
             }
