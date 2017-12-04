@@ -3,13 +3,13 @@
 /* Add the dependencies you're testing */
 const taskStandard = artifacts.require("./taskStandard.sol");
 const Token = artifacts.require("./Queue.sol");
-const taskComplex = artifacts.require("./taskThirdParty.sol");
+const taskThirdParty = artifacts.require("./taskThirdParty.sol");
 // YOUR CODE HERE
 // var Web3 = require('web3');
 // var web3 = new Web3();
 // web3.setProvider(new web3.providers.HttpProvider("http://localhost:8545"));
 
-contract('taskTest', function(accounts) {
+contract('taskThirdPartyTest', function(accounts) {
 	/* Define your constant variables and instantiate constantly changing
 	 * ones
 	 */
@@ -19,12 +19,14 @@ contract('taskTest', function(accounts) {
 	let owner;
 	let ipfs_test_submission;
 	let ipfs_test_request;
+	let verifiers;
 	/* Do something before every `describe` method */
 	beforeEach(async function() {
 		owner = accounts[0];
 		ipfs_test_request = "QmeZQ7CFTCxucyGxQJBhqxhU4Bb7aDL543HyqCqo53BiaR";
 		ipfs_test_submission = "QmfB4w2Sqtc6wM2bLQeRAn8Zgd2LQEhheUnqSjqEwoivat";
-		task = await taskStandard.new("ez", 30, 5, 0, { from:  owner, value: 5});
+		verifiers = [accounts[1], accounts[2], accounts[3]];
+		task = await taskThirdParty.new("ez", 30, 5, 0, verifiers,  {from:  owner, value: 5});
 	});
 
 	/* Group test cases together
@@ -37,7 +39,6 @@ contract('taskTest', function(accounts) {
 		// 	assert.equal(maxReward, 5000, "task starts with 5000 wei");
 		// });
 
-		//NOTE THAT THIS DOES NOT SEEM TO WORK WITH TRUFFLE TEST BUT WILL WORK WITH OYENTE
 		it("The end time should be 30 minutes after the start time", async function() {
 			let start_time = await task.start_time.call();
 			let end_time = await task.end_time.call();
@@ -76,6 +77,17 @@ contract('taskTest', function(accounts) {
 			assert.equal(Number(reward.valueOf()), 10, "The reward should be constructed to 10");
 		});
 
+		it("The verifiers should be able to see they are verifiers", async function() {
+			let verifiers_b = await task.getVerifiers();
+			let a = verifiers_b.valueOf()[0];
+			let b = verifiers_b.valueOf()[1];
+			let c = verifiers_b.valueOf()[2];
+			assert.equal(a, verifiers[0], "Verifiers should be equal");
+			assert.equal(b, verifiers[1], "Verifiers should be equal");
+			assert.equal(c, verifiers[2], "Verifiers should be equal");
+		});
+
+
 	});
 
 	describe('--Queueing, Submitting, Approving, Denying--', function() {
@@ -91,23 +103,32 @@ contract('taskTest', function(accounts) {
 			assert.equal(qsize2.valueOf(), 2, "Correct queue size of 2");
 			assert.equal(firstSubmission.valueOf(), "test_request", "Correct first submission");
 		});
-		it("The requester should be able to deny a buyer", async function() {
-			await task.submit("test_request", {from: accounts[1]});
-			await task.submit("DUMMY_HASH",{from: accounts[2]});
-			await task.denyFirstSubmission({from: accounts[0]});
+		it("The verifiers should be able to deny a buyer", async function() {
+			await task.submit("test_request", {from: accounts[4]});
+			await task.submit("part 2", {from: accounts[3]});
+			await task.vote(false,{from: accounts[1]});
+			await task.vote(false, {from: accounts[2]});
 			let qsize = await task.getQSize();
-			let firstAddress = await task.getFirstAddress();
+			let firstAddress_a = await task.getFirstAddress();
+			await task.checkVotes();
+			let firstAddress_b = await task.getFirstAddress();
 			assert.equal(qsize.valueOf(), 1, "Correct q size after denial");
-			assert.equal(firstAddress.valueOf(), accounts[2], "Correct first submission");
+			assert.equal(firstAddress_a.valueOf(), accounts[4], "Correct first submission");
+			assert.equal(firstAddress_b.valueOf(), accounts[3], "Correct next submission")
 		});
-		it("The requester should be able to accept a buyer", async function() {
-			await task.submit(ipfs_test_submission, {from: accounts[1]});
+		it("The verifiers should be able to accept a buyer", async function() {
+			await task.submit(ipfs_test_submission, {from: accounts[4]});
 			await task.submit("DUMMY_HASH",{from: accounts[2]});
-			await task.approveFirstSubmission({from: accounts[0]});
+			await task.vote(true,{from: accounts[1]});
+			await task.vote(true, {from: accounts[3]});
+			let qsize = await task.getQSize();
+			let firstAddress_a = await task.getFirstAddress();
+			await task.checkVotes();
 			let completed = await task.completed.call();
 			let balance = await task.getBalance({from: accounts[1]});
 			assert.equal(balance.valueOf(), 5, "Correct balance");
 			assert.equal(completed.valueOf(), true, "Correct completed value");
 		});
 	});
+
 });
