@@ -1,4 +1,4 @@
-pragma solidity ^0.4.19;
+pragma solidity ^0.4.4;
 
 /**
  * @title Queue
@@ -9,8 +9,8 @@ contract Queue {
 	uint8 size = 5;
 	uint8 spotsFilled;
 	uint limit;
-	Submission[] queueList;
-
+    address[] queueList;
+    mapping(address => Submission) submissionList;
     struct Submission {
         address worker;
         bytes32 ipfs_hash;
@@ -22,7 +22,7 @@ contract Queue {
 	function Queue(uint8 _size) {
 		spotsFilled = 0;
         size = _size;
-		queueList = new Submission[](size);
+        queueList = new address[](size);
 	}
 
 	/* Returns the number of people waiting in line */
@@ -40,34 +40,28 @@ contract Queue {
         return (spotsFilled == size);
     }
 
-	/* Returns the full submission struct of the person in the front of the queue */
-	function getFirst() constant returns(Submission) {
+    /* Returns the address of the person in the front of the queue */
+	function getFirstAddress() constant returns(address) {
 		require(spotsFilled>0);
 		return queueList[0];
 	}
 
     /* Returns the address of the person in the front of the queue */
-	function getFirstAddress() constant returns(address) {
-		require(spotsFilled>0);
-		return queueList[0].worker;
-	}
-
-    /* Returns the address of the person in the front of the queue */
 	function getFirstSubmission() constant returns(bytes32) {
 		require(spotsFilled>0);
-		return queueList[0].ipfs_hash;
+		return submissionList[queueList[0]].ipfs_hash;
 	}
 
     /* Returns the timestamp of the person in the front of the queue */
 	function getFirstTime() constant returns(uint256) {
 		require(spotsFilled>0);
-		return queueList[0].time;
+		return submissionList[queueList[0]].time;
 	}
 
 	/* Allows `msg.sender` to check their position in the queue */
 	function checkPlace() constant returns(uint8) {
 		for (uint8 i = 0; i < spotsFilled; i++) {
-			if (queueList[i].worker == msg.sender) {
+			if (submissionList[queueList[i]].worker == msg.sender) {
 				return i + 1;
 			}
 		}
@@ -89,7 +83,8 @@ contract Queue {
 	function enqueue(address addr, bytes32 submission) returns(bool){
 		if (spotsFilled < size) {
 			spotsFilled += 1;
-            queueList[spotsFilled - 1] = Submission(addr, submission, now);
+            queueList[spotsFilled - 1] = addr;
+            submissionList[addr] = Submission(addr, submission, now);
             if (spotsFilled==size) {
                 limitReached();
             }

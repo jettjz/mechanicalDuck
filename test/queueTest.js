@@ -9,12 +9,12 @@ contract('queueTest', function(accounts) {
 	 */
 	const args = {_zero: 0};
 	let queue;
-	// YOUR CODE HERE
-
+	let ipfs_test_submission;
 	/* Do something before every `describe` method */
 	beforeEach(async function() {
 		// deploy new queue to use
 		queue = await Queue.new(5);
+		ipfs_test_submission = "QmfB4w2Sqtc6wM2bLQeRAn8Zgd2LQEhheUnqSjqEwoivat";
 	});
 
 	/* Group test cases together
@@ -33,8 +33,8 @@ contract('queueTest', function(accounts) {
 	});
 
 	describe('--Adding Users to Queue--', function() {
-		it("Adding first user", async function() {
-			await queue.enqueue(accounts[0]);
+		it("Adding users", async function() {
+			await queue.enqueue(accounts[0], "DUMMY_HASH");
 
 			let qsize = await queue.qsize.call();
 			assert.equal(qsize.valueOf(), 1, "User 1 added - spotsFilled is now 1");
@@ -48,10 +48,10 @@ contract('queueTest', function(accounts) {
 			let otherpos = await queue.checkPlace.call({from: accounts[1]});
 			assert.equal(otherpos.valueOf(), 0, "Other user has no result for checkPosition");
 
-			let first = await queue.getFirst.call();
+			let first = await queue.getFirstAddress.call();
 			assert.equal(first.valueOf(), accounts[0], "getFirst matches user 1");
 
-			await queue.enqueue(accounts[1]);
+			await queue.enqueue(accounts[1], ipfs_test_submission);
 
 			qsize = await queue.qsize.call();
 			assert.equal(qsize.valueOf(), 2, "User 2 added - spotsFilled is now 2");
@@ -59,7 +59,7 @@ contract('queueTest', function(accounts) {
 			pos = await queue.checkPlace.call({from: accounts[1]});
 			assert.equal(pos.valueOf(), 2, "User 2 is in position 2");
 
-			await queue.enqueue(accounts[2]);
+			await queue.enqueue(accounts[2], "DUMMY_HASH2");
 
 			qsize = await queue.qsize.call();
 			assert.equal(qsize.valueOf(), 3, "User 3 added - spotsFilled is now 3");
@@ -67,7 +67,7 @@ contract('queueTest', function(accounts) {
 			pos = await queue.checkPlace.call({from: accounts[2]});
 			assert.equal(pos.valueOf(), 3, "User is in position 3");
 
-			await queue.enqueue(accounts[3]);
+			await queue.enqueue(accounts[3], "DUMMY_HASH3");
 
 			qsize = await queue.qsize.call();
 			assert.equal(qsize.valueOf(), 4, "User 4 added - spotsFilled is now 4");
@@ -75,7 +75,7 @@ contract('queueTest', function(accounts) {
 			pos = await queue.checkPlace.call({from: accounts[3]});
 			assert.equal(pos.valueOf(), 4, "User is in position 4");
 
-			await queue.enqueue(accounts[4]);
+			await queue.enqueue(accounts[4], "DUMMY_HASH3");
 
 			qsize = await queue.qsize.call();
 			assert.equal(qsize.valueOf(), 5, "User 5 added - spotsFilled is now 5");
@@ -83,13 +83,13 @@ contract('queueTest', function(accounts) {
 			pos = await queue.checkPlace.call({from: accounts[4]});
 			assert.equal(pos.valueOf(), 5, "User 5 is in position 5");
 
-			await queue.enqueue(accounts[5]);
+			await queue.enqueue(accounts[5], "DUMMY_HASH3");
 
 			qsize = await queue.qsize.call();
 			assert.equal(qsize.valueOf(), 5, "Extra user doesn't change spotsFilled - still is 5");
 
 			let isFull = await queue.isFull.call();
-			assert.equal(isEmpty.valueOf(), true, "Newly instantiated queue is Full");
+			assert.equal(isFull, true, "Newly instantiated queue is Full");
 
 			pos = await queue.checkPlace.call({from: accounts[5]});
 			assert.equal(pos.valueOf(), 0, "Extra user doesn't have position in queue");
@@ -104,27 +104,27 @@ contract('queueTest', function(accounts) {
 		});
 
 		it("Removing from queue with spotsFilled = 1", async function() {
-			await queue.enqueue(accounts[0]);
+			await queue.enqueue(accounts[0], "DENIED_SUBMISSION");
 
 			await queue.dequeue();
 			let qsize = await queue.qsize.call();
 			assert.equal(qsize.valueOf(), args._zero, "spotsFilled should still be zero");
 
 			let isEmpty = await queue.empty.call();
-			assert.equal(isEmpty.valueOf(), true, "Queue is empty");
+			assert.equal(isEmpty, true, "Queue is empty");
 		});
 
 		it("Removing from queue with spotsFilled = 4", async function () {
-			await queue.enqueue(accounts[0]);
-			await queue.enqueue(accounts[1]);
-			await queue.enqueue(accounts[2]);
-			await queue.enqueue(accounts[3]);
+			await queue.enqueue(accounts[0],"1");
+			await queue.enqueue(accounts[1],"2");
+			await queue.enqueue(accounts[2],"3");
+			await queue.enqueue(accounts[3],"4");
 
 			await queue.dequeue();
 			let qsize = await queue.qsize.call();
 			assert.equal(qsize.valueOf(), 3, "spotsFilled should be 3 after 1 removal");
 
-			let first = await queue.getFirst.call();
+			let first = await queue.getFirstAddress.call();
 			assert.equal(first.valueOf(), accounts[1], "First user should be user 2");
 
 			let pos = await queue.checkPlace.call({from: accounts[0]});
